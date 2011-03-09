@@ -51,6 +51,7 @@ void handle_acpi_events(struct ConstValues const* vals,
     int als_brgt = -1;
     int current_brgt = -1;
     int new_brgt = -1;
+    int kbd_bl = 0;
 
     if (!strcmp(evt_cls, SONY_EVENT_CLASS) &&
         !strcmp(evt_type, SONY_EVENT_TYPE) &&
@@ -66,6 +67,11 @@ void handle_acpi_events(struct ConstValues const* vals,
                 update_brightness(ACPI_BL_BRGT, current_brgt, new_brgt);
             else /* BC_NVIDIA */
                 update_brightness(NVIDIA_BL_BRGT, current_brgt, new_brgt);
+
+            /* Turn on keyboard backlight in dim lighting */
+            kbd_bl = read_int_from_file(SONY_KBD_BL);
+            if ((als_brgt < AMBIENT_TOO_DIM)^kbd_bl)
+                write_int_to_file(SONY_KBD_BL, !kbd_bl);
         }
     }
 }

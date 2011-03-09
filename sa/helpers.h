@@ -17,6 +17,8 @@ static char const*const NVIDIA_BL_BRGT = "/sys/class/backlight/nvidia_backlight/
 static char const*const NVIDIA_BL_BRGT_MAX = "/sys/class/backlight/nvidia_backlight/max_brightness";
 
 static char const*const SONY_ALS_BL = "/sys/devices/platform/sony-laptop/als_backlight";
+static char const*const SONY_KBD_BL = "/sys/devices/platform/sony-laptop/kbd_backlight";
+static unsigned int const AMBIENT_TOO_DIM = 25; /* If als_backlight < 25 then the environment is too dim */
 static char const*const SONY_EVENT_CLASS = "sony/hotkey";
 static char const*const SONY_EVENT_TYPE = "SNC";
 static char const*const SONY_EVENT_MAJOR = "00000001";
