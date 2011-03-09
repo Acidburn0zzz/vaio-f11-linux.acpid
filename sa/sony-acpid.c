@@ -4,18 +4,17 @@
 #include "helpers.h"
 
 /* File paths */
-char const*const ACPI_EVENT_FILE = "/proc/acpi/event";
-char const*const ACPI_BL_DIR = "/sys/class/backlight/acpi_video0/";
-char const*const ACPI_BGRT = "brightness";
-char const*const ACPI_BGRT_MAX = "max_brightness";
-char const*const NVIDIA_BL_DIR = "/sys/class/backlight/nvidia_backlight/";
-char const*const SONY_SYSFS_DIR = "/sys/devices/platform/sony-laptop/";
-char const*const SONY_KBD_BACKLIGHT = "kbd_backlight";
+static char const*const ACPI_EVENT_FILE = "/proc/acpi/event";
 
 int main(int argc, char** argv) {
     FILE* const event_fd = open_file(ACPI_EVENT_FILE, "r");
+    int bl_ctrl = BC_ACPI;
+    if (argc > 1) {
+        if (!strcmp(argv[1], "nvidia"))
+            bl_ctrl = BC_NVIDIA;
+    }
 
-    acpi_event_loop(event_fd, &handle_acpi_events);
+    acpi_event_loop(event_fd, bl_ctrl, &handle_acpi_events);
 
     /* We may never reach this line unless we handle terminate signal */
     fclose(event_fd);
