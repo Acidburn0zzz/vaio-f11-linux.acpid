@@ -4,5 +4,10 @@ CC=gcc
 CFLAGS="-Wall -W -O2 -march=native -pipe"
 SRC_DIR=sa
 OUTPUT=bin/sony-acpid
+OUTPUTDIR=$(dirname $OUTPUT)
+
+if [ ! -d $OUTPUTDIR ]; then
+	mkdir $OUTPUTDIR
+fi
 
 $CC $CFLAGS -o $OUTPUT $SRC_DIR/*.c
