@@ -1,21 +1,6 @@
-#include "helpers.h"
+#include "acpi_funcs.h"
 
-FILE* open_file(char const* path, char const* mode) {
-    FILE* const fd = fopen(path, mode);
-    if (!fd) {
-        fprintf(stderr, "open_file: can't open %s: %s\n",
-                path, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    return fd;
-}
-
-void acpi_event_loop(FILE* fd, int bl_ctrl,
-                     void(*event_func)(struct ConstValues const*,
-                                       char const*, char const*,
-                                       char const*, char const*)) {
-    size_t BUF_SIZE = 1024;
+void acpi_event_loop(int fd, int bl_ctrl) {
     char* buf = NULL;
 
     char* evt_toks[4];
@@ -23,25 +8,16 @@ void acpi_event_loop(FILE* fd, int bl_ctrl,
 
     struct ConstValues const vals = init_const_values(bl_ctrl);
 
-    buf = malloc(BUF_SIZE);
-    if (!buf) {
-        fprintf(stderr, "acpi_event_loop: can't malloc buffer of size %d\n",
-                BUF_SIZE);
-        exit(EXIT_FAILURE);
-    }
-
-    while (getline(&buf, &BUF_SIZE, fd) != -1) {
+    while ((buf = read_line(fd)) != NULL) {
         for (i = 0; i != 4; ++i) { /* Assuming it's always 4 items */
             if (!i)
                 evt_toks[i] = strtok(buf, " ");
             else evt_toks[i] = strtok(NULL, " ");
         }
-        evt_toks[3][strlen(evt_toks[3])-1] = 0; /* Eliminate trailing newline */
 
-        event_func(&vals, evt_toks[0], evt_toks[1], evt_toks[2], evt_toks[3]);
+        handle_acpi_events(&vals, evt_toks[0], evt_toks[1],
+                           evt_toks[2], evt_toks[3]);
     }
-
-    free(buf);
 }
 
 void handle_acpi_events(struct ConstValues const* vals,
@@ -74,28 +50,6 @@ void handle_acpi_events(struct ConstValues const* vals,
                 write_int_to_file(SONY_KBD_BL, !kbd_bl);
         }
     }
-}
-
-int read_int_from_file(char const* path) {
-    FILE* const fd = open_file(path, "r");
-    int result = -1;
-    if (fscanf(fd, "%i", &result) != 1) {
-        fprintf(stderr, "read_int_from_file: fscanf() failed - %s\n",
-                strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    fclose(fd);
-
-    return result;
-}
-void write_int_to_file(char const* path, int val) {
-    FILE* const fd = open_file(path, "w");
-    if (fprintf(fd, "%i", val) < 0) {
-        fprintf(stderr, "write_int_to_file: fprintf failed - %s\n",
-                strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    fclose(fd);
 }
 
 struct ConstValues init_const_values(int bl_ctrl) {

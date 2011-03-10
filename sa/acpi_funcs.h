@@ -1,5 +1,5 @@
-#ifndef  HELPERS_INC
-#define  HELPERS_INC
+#ifndef  ACPI_FUNCS_INC
+#define  ACPI_FUNCS_INC
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "file_funcs.h"
 
 enum BacklightController {BC_ACPI, BC_NVIDIA};
 
@@ -31,21 +33,13 @@ struct ConstValues {
 };
 struct ConstValues init_const_values(int bl_ctrl);
 
-FILE* open_file(char const* path, char const* mode);
-
-void acpi_event_loop(FILE* fd, int bl_ctrl,
-                     void(*event_func)(struct ConstValues const*,
-                                       char const*, char const*,
-                                       char const*, char const*));
+void acpi_event_loop(int fd, int bl_ctrl);
 
 void handle_acpi_events(struct ConstValues const* vals,
                         char const* evt_cls, char const* evt_type,
                         char const* evt_major, char const* evt_minor);
 
-int read_int_from_file(char const* path);
-void write_int_to_file(char const* path, int val);
-
 void update_brightness(char const* path, int current, int target);
 
-#endif   /* ----- #ifndef HELPERS_INC  ----- */
+#endif   /* ----- #ifndef ACPI_FUNCS_INC  ----- */
 

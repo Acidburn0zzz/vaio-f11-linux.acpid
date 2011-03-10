@@ -2,13 +2,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "helpers.h"
-
-/* File paths */
-static char const*const ACPI_EVENT_FILE = "/proc/acpi/event";
+#include "file_funcs.h"
+#include "acpi_funcs.h"
 
 int main(int argc, char** argv) {
-    FILE* const event_fd = open_file(ACPI_EVENT_FILE, "r");
+    char const*const ACPID_SOCKET_FILE = "/var/run/acpid.socket";
+    int const sock_fd = ud_connect(ACPID_SOCKET_FILE);
     int bl_ctrl = BC_ACPI;
     int opt = -1;
 
@@ -27,10 +26,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    acpi_event_loop(event_fd, bl_ctrl, &handle_acpi_events);
+    acpi_event_loop(sock_fd, bl_ctrl);
 
     /* We may never reach this line unless we handle terminate signal */
-    fclose(event_fd);
+    close(sock_fd);
 
     return 0;
 }
