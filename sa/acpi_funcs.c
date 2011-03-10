@@ -27,7 +27,7 @@ void acpi_event_loop(int fd, int bl_ctrl) {
     char* evt_toks[4];
     unsigned int i = 0;
 
-    struct ConstValues const vals = init_const_values(bl_ctrl);
+    struct AcpiData const vals = init_acpi_data(bl_ctrl);
 
     while ((buf = read_line(fd)) != NULL) {
         for (i = 0; i != 4; ++i) { /* Assuming it's always 4 items */
@@ -40,7 +40,7 @@ void acpi_event_loop(int fd, int bl_ctrl) {
     }
 }
 
-void handle_acpi_events(struct ConstValues const* vals, char const* evt_toks[4]) {
+void handle_acpi_events(struct AcpiData const* vals, char const* evt_toks[4]) {
     /* Assuming all params are valid */
     int als_brgt = -1;
     int current_brgt = -1;
@@ -72,8 +72,8 @@ void handle_acpi_events(struct ConstValues const* vals, char const* evt_toks[4])
     }
 }
 
-struct ConstValues init_const_values(int bl_ctrl) {
-    struct ConstValues vals;
+struct AcpiData init_acpi_data(int bl_ctrl) {
+    struct AcpiData vals;
 
     vals.bl_ctrl = bl_ctrl;
 

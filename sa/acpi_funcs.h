@@ -50,15 +50,15 @@ static char const*const SONY_EVENT_ALS = "00000003";
 static char const*const SONY_BL_UP = "00000011";
 static char const*const SONY_BL_DOWN = "00000010";
 
-struct ConstValues {
+struct AcpiData {
     unsigned int max_brgt, min_brgt;
-    int bl_ctrl;
+    unsigned int bl_ctrl;
 };
-struct ConstValues init_const_values(int bl_ctrl);
+struct AcpiData init_acpi_data(int bl_ctrl);
 
 void acpi_event_loop(int fd, int bl_ctrl);
 
-void handle_acpi_events(struct ConstValues const* vals, char const* evt_toks[4]);
+void handle_acpi_events(struct AcpiData const* vals, char const* evt_toks[4]);
 
 void update_brightness(char const* path, int current, int target);
 
