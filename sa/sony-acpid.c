@@ -32,17 +32,14 @@ int main(int argc, char** argv) {
     int bl_ctrl = BC_ACPI;
     int opt = -1;
 
-    while ((opt = getopt(argc, argv, "c:t:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:")) != -1) {
         switch (opt) {
             case 'c':
                 if (!strcmp(optarg, "nvidia"))
                     bl_ctrl = BC_NVIDIA;
                 break;
-            case 't':
-                write_int_to_file(SONY_ALS_LUX_THRESHOLD, atoi(optarg));
-                break;
             default:
-                fprintf(stderr, "Usage: %s [-c acpi|nvidia] [-t number]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-c acpi|nvidia]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }

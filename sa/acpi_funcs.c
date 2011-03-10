@@ -42,7 +42,8 @@ void acpi_event_loop(int fd, int bl_ctrl) {
 
 void handle_acpi_events(struct AcpiData* vals, char const* evt_toks[4]) {
     /* Assuming all params are valid */
-    int als_brgt = -1;
+    int als_lux = -1;
+    float perceived_brgt_change = 0.0f;
     int current_brgt = -1;
     int new_brgt = -1;
     int kbd_bl = 0;
@@ -54,12 +55,12 @@ void handle_acpi_events(struct AcpiData* vals, char const* evt_toks[4]) {
         !strcmp(evt_toks[1], SONY_EVENT_TYPE) &&
         !strcmp(evt_toks[2], SONY_EVENT_MAJOR)) {
         current_brgt = read_int_from_file(brgt_path);
-        als_brgt = read_int_from_file(SONY_ALS_BL);
+        als_lux = read_int_from_file(SONY_ALS_LUX);
 
         if (!strcmp(evt_toks[3], SONY_EVENT_ALS)) { /* Ambient lighting changed */
             /* Turn on keyboard backlight in dim lighting */
             kbd_bl = read_int_from_file(SONY_KBD_BL);
-            if ((als_brgt < AMBIENT_TOO_DIM)^kbd_bl)
+            if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
                 write_int_to_file(SONY_KBD_BL, !kbd_bl);
 
             update_brgt = 1;
@@ -78,12 +79,17 @@ void handle_acpi_events(struct AcpiData* vals, char const* evt_toks[4]) {
         }
 
         if (update_brgt) {
-            new_brgt = (vals->brightness+(als_brgt/100.0f-0.5)*MAX_NORMALIZED_BRGT)/
+            if (!als_lux)
+                ++als_lux;
+            perceived_brgt_change = 10.0f*log10f((float)als_lux/vals->lux_prev)/4.0f;
+            new_brgt = (vals->brightness+perceived_brgt_change)/
                        (float)MAX_NORMALIZED_BRGT*vals->brgt_range+vals->min_brgt;
             if (new_brgt > vals->max_brgt)
                 new_brgt = vals->max_brgt;
             else if (new_brgt < vals->min_brgt)
                 new_brgt = vals->min_brgt;
+
+            vals->lux_prev = als_lux;
 
             update_brightness(brgt_path, current_brgt, new_brgt);
         }
@@ -112,12 +118,14 @@ struct AcpiData init_acpi_data(int bl_ctrl) {
     /* Normalize user controlled brightness to 0-MAX_NORMALIZED_BRGT */
     vals.brightness = (current_brgt-vals.min_brgt)*MAX_NORMALIZED_BRGT/(float)vals.brgt_range;
 
+    vals.lux_prev = read_int_from_file(SONY_ALS_LUX);
+
     return vals;
 }
 
 void update_brightness(char const* path, int current, int target) {
     struct timespec const ts = {0, 50*1000*1000};
-    float const step = (target-current)/10.0f;
+    float const step = (target-current)/20.0f;
     unsigned int i = 1;
 
     if (target == current)

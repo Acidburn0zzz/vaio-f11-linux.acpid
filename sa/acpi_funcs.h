@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #include "file_funcs.h"
 
@@ -39,10 +40,9 @@ static char const*const ACPI_BL_BRGT_MAX = "/sys/class/backlight/acpi_video0/max
 static char const*const NVIDIA_BL_BRGT = "/sys/class/backlight/nvidia_backlight/brightness";
 static char const*const NVIDIA_BL_BRGT_MAX = "/sys/class/backlight/nvidia_backlight/max_brightness";
 
-static char const*const SONY_ALS_BL = "/sys/devices/platform/sony-laptop/als_backlight";
-static char const*const SONY_ALS_LUX_THRESHOLD = "/sys/devices/platform/sony-laptop/als_lux_threshold";
+static char const*const SONY_ALS_LUX = "/sys/devices/platform/sony-laptop/als_lux";
 static char const*const SONY_KBD_BL = "/sys/devices/platform/sony-laptop/kbd_backlight";
-static int const AMBIENT_TOO_DIM = 25; /* If als_backlight < 25 then the environment is too dim */
+static int const AMBIENT_TOO_DIM = 7; /* If als_lux < 7 then the environment is too dim */
 static char const*const SONY_EVENT_CLASS = "sony/hotkey";
 static char const*const SONY_EVENT_TYPE = "SNC";
 static char const*const SONY_EVENT_MAJOR = "00000001";
@@ -56,6 +56,7 @@ struct AcpiData {
     int max_brgt, min_brgt, brgt_range;
     int bl_ctrl;
     int brightness; /* 0-MAX_NORMALIZED_BRGT */
+    int lux_prev;
 };
 struct AcpiData init_acpi_data(int bl_ctrl);
 
