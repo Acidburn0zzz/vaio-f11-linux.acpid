@@ -36,25 +36,22 @@ void acpi_event_loop(int fd, int bl_ctrl) {
             else evt_toks[i] = strtok(NULL, " ");
         }
 
-        handle_acpi_events(&vals, evt_toks[0], evt_toks[1],
-                           evt_toks[2], evt_toks[3]);
+        handle_acpi_events(&vals, evt_toks);
     }
 }
 
-void handle_acpi_events(struct ConstValues const* vals,
-                        char const* evt_cls, char const* evt_type,
-                        char const* evt_major, char const* evt_minor) {
+void handle_acpi_events(struct ConstValues const* vals, char const* evt_toks[4]) {
     /* Assuming all params are valid */
     int als_brgt = -1;
     int current_brgt = -1;
     int new_brgt = -1;
     int kbd_bl = 0;
 
-    if (!strcmp(evt_cls, SONY_EVENT_CLASS) &&
-        !strcmp(evt_type, SONY_EVENT_TYPE) &&
-        !strcmp(evt_major, SONY_EVENT_MAJOR)) {
+    if (!strcmp(evt_toks[0], SONY_EVENT_CLASS) &&
+        !strcmp(evt_toks[1], SONY_EVENT_TYPE) &&
+        !strcmp(evt_toks[2], SONY_EVENT_MAJOR)) {
         /* Ambient lighting changed */
-        if (!strcmp(evt_minor, SONY_EVENT_ALS)) {
+        if (!strcmp(evt_toks[3], SONY_EVENT_ALS)) {
             als_brgt = read_int_from_file(SONY_ALS_BL);
             current_brgt = read_int_from_file(NVIDIA_BL_BRGT);
             new_brgt = als_brgt/100.0f*(vals->max_brgt-vals->min_brgt)+
@@ -70,6 +67,8 @@ void handle_acpi_events(struct ConstValues const* vals,
             if ((als_brgt < AMBIENT_TOO_DIM)^kbd_bl)
                 write_int_to_file(SONY_KBD_BL, !kbd_bl);
         }
+
+        /* Backlight changed by user */
     }
 }
 

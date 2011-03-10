@@ -47,6 +47,8 @@ static char const*const SONY_EVENT_CLASS = "sony/hotkey";
 static char const*const SONY_EVENT_TYPE = "SNC";
 static char const*const SONY_EVENT_MAJOR = "00000001";
 static char const*const SONY_EVENT_ALS = "00000003";
+static char const*const SONY_BL_UP = "00000011";
+static char const*const SONY_BL_DOWN = "00000010";
 
 struct ConstValues {
     unsigned int max_brgt, min_brgt;
@@ -56,9 +58,7 @@ struct ConstValues init_const_values(int bl_ctrl);
 
 void acpi_event_loop(int fd, int bl_ctrl);
 
-void handle_acpi_events(struct ConstValues const* vals,
-                        char const* evt_cls, char const* evt_type,
-                        char const* evt_major, char const* evt_minor);
+void handle_acpi_events(struct ConstValues const* vals, char const* evt_toks[4]);
 
 void update_brightness(char const* path, int current, int target);
 
