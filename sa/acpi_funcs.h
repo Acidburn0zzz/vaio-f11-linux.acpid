@@ -53,6 +53,7 @@ static char const*const SONY_BL_DOWN = "00000010";
 struct AcpiData {
     unsigned int max_brgt, min_brgt;
     unsigned int bl_ctrl;
+    unsigned int brightness; /* 0-9 */
 };
 struct AcpiData init_acpi_data(int bl_ctrl);
 

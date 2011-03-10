@@ -53,14 +53,13 @@ void handle_acpi_events(struct AcpiData const* vals, char const* evt_toks[4]) {
         /* Ambient lighting changed */
         if (!strcmp(evt_toks[3], SONY_EVENT_ALS)) {
             als_brgt = read_int_from_file(SONY_ALS_BL);
-            current_brgt = read_int_from_file(NVIDIA_BL_BRGT);
+            current_brgt = read_int_from_file(vals->bl_ctrl == BC_ACPI ?
+                                              ACPI_BL_BRGT : NVIDIA_BL_BRGT);
             new_brgt = als_brgt/100.0f*(vals->max_brgt-vals->min_brgt)+
                        vals->min_brgt;
 
-            if (vals->bl_ctrl == BC_ACPI)
-                update_brightness(ACPI_BL_BRGT, current_brgt, new_brgt);
-            else /* BC_NVIDIA */
-                update_brightness(NVIDIA_BL_BRGT, current_brgt, new_brgt);
+            update_brightness(vals->bl_ctrl == BC_ACPI ? ACPI_BL_BRGT : NVIDIA_BL_BRGT,
+                              current_brgt, new_brgt);
 
             /* Turn on keyboard backlight in dim lighting */
             kbd_bl = read_int_from_file(SONY_KBD_BL);
@@ -80,10 +79,12 @@ struct AcpiData init_acpi_data(int bl_ctrl) {
     if (bl_ctrl == BC_ACPI) {
         vals.max_brgt = read_int_from_file(ACPI_BL_BRGT_MAX);
         vals.min_brgt = 0;
+        vals.brightness = read_int_from_file(ACPI_BL_BRGT);
     }
     else { /* BC_NVIDIA */
         vals.max_brgt = read_int_from_file(NVIDIA_BL_BRGT_MAX);
         vals.min_brgt = 1500;
+        vals.brightness = read_int_from_file(NVIDIA_BL_BRGT);
     }
 
     return vals;
