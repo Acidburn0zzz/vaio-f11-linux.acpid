@@ -120,8 +120,8 @@ void update_brightness(char const* path, int current, int target) {
     float const step = (target-current)/10.0f;
     unsigned int i = 1;
 
-    if ((step < 1.0f) && (step > -1.0f))
-        return; /* Ignore tiny brightness change */
+    if (target == current)
+        return;
 
     while (i != 11) {
         write_int_to_file(path, current+step*i);
