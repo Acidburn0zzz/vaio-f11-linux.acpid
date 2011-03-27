@@ -38,6 +38,7 @@ FILE* open_file(char const* path, char const* mode);
 
 int read_int_from_file(char const* path);
 void write_int_to_file(char const* path, int val);
+void read_hex_from_file(char const* path, int* array, int size);
 
 int ud_connect(char const* name);
 

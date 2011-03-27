@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "file_funcs.h"
 #include "acpi_funcs.h"
@@ -31,15 +33,25 @@ int main(int argc, char** argv) {
     int const sock_fd = ud_connect(ACPID_SOCKET_FILE);
     int bl_ctrl = BC_ACPI;
     int opt = -1;
+    struct stat st;
+
+    if (!stat(NVIDIA_BL_BRGT, &st))
+        bl_ctrl = BC_NVIDIA;
+    else if (!stat(SONY_BL_BRGT, &st))
+        bl_ctrl = BC_SONY;
 
     while ((opt = getopt(argc, argv, "c:")) != -1) {
         switch (opt) {
             case 'c':
                 if (!strcmp(optarg, "nvidia"))
                     bl_ctrl = BC_NVIDIA;
+                else if (!strcmp(optarg, "sony"))
+                    bl_ctrl = BC_SONY;
+                else if (!strcmp(optarg, "acpi"))
+                    bl_ctrl = BC_ACPI;
                 break;
             default:
-                fprintf(stderr, "Usage: %s [-c acpi|nvidia]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-c acpi|nvidia|sony]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }

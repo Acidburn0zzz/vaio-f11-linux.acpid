@@ -55,6 +55,19 @@ void write_int_to_file(char const* path, int val) {
     }
     fclose(fd);
 }
+void read_hex_from_file(char const* path, int* array, int size) {
+    FILE* const fd = open_file(path, "r");
+    int result, i;
+    for (i = 0; i < size; i++) {
+        if (fscanf(fd, "0x%x ", &result) != 1) {
+            fprintf(stderr, "read_hex_from_file: fscanf(%d) failed - %s\n", i,
+                    strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        array[i] = result;
+    }
+    fclose(fd);
+}
 
 int ud_connect(char const* name) {
     int fd = -1;

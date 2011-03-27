@@ -1,8 +1,10 @@
 #!/bin/sh
 
 CC=gcc
+# TODO Check -pedantic -ansi flags
 CFLAGS="-Wall -W -O2 -march=native -pipe"
 LDFLAGS="-lm"
+DEFINES="-D__USE_POSIX199309"
 SRC_DIR=sa
 OUTPUT=bin/sony-acpid
 OUTPUTDIR=$(dirname $OUTPUT)
@@ -11,4 +13,4 @@ if [ ! -d $OUTPUTDIR ]; then
 	mkdir $OUTPUTDIR
 fi
 
-$CC $CFLAGS $LDFLAGS -o $OUTPUT $SRC_DIR/*.c
+$CC $CFLAGS $LDFLAGS $DEFINES -o $OUTPUT $SRC_DIR/*.c
