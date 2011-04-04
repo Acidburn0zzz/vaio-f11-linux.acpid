@@ -24,42 +24,44 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
+#include <string.h>
 
 #include "file_funcs.h"
 #include "acpi_funcs.h"
 
-int main(int argc, char** argv) {
+int sock_fd = -1;
+
+void sig_handler(int signum) {
+    write_int_to_file(SONY_ALS_MANAGED, 0);
+    write_int_to_file(SONY_ALS_POWER, 0);
+
+    close(sock_fd);
+}
+
+int main() {
+    char const*const SONY_LAPTOP_DIR = "/sys/devices/platform/sony-laptop";
     char const*const ACPID_SOCKET_FILE = "/var/run/acpid.socket";
-    int const sock_fd = ud_connect(ACPID_SOCKET_FILE);
-    int bl_ctrl = BC_ACPI;
-    int opt = -1;
     struct stat st;
+    struct sigaction act;
 
-    if (!stat(NVIDIA_BL_BRGT, &st))
-        bl_ctrl = BC_NVIDIA;
-    else if (!stat(SONY_BL_BRGT, &st))
-        bl_ctrl = BC_SONY;
-
-    while ((opt = getopt(argc, argv, "c:")) != -1) {
-        switch (opt) {
-            case 'c':
-                if (!strcmp(optarg, "nvidia"))
-                    bl_ctrl = BC_NVIDIA;
-                else if (!strcmp(optarg, "sony"))
-                    bl_ctrl = BC_SONY;
-                else if (!strcmp(optarg, "acpi"))
-                    bl_ctrl = BC_ACPI;
-                break;
-            default:
-                fprintf(stderr, "Usage: %s [-c acpi|nvidia|sony]\n", argv[0]);
-                exit(EXIT_FAILURE);
-        }
+    if (stat(SONY_LAPTOP_DIR, &st)) {
+        printf("%s not found, is sony-laptop module loaded?\n", SONY_LAPTOP_DIR);
+        exit(EXIT_FAILURE);
     }
 
-    acpi_event_loop(sock_fd, bl_ctrl);
+    sock_fd = ud_connect(ACPID_SOCKET_FILE);
 
-    /* We may never reach this line unless we handle terminate signal */
-    close(sock_fd);
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = sig_handler;
+    act.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &act, NULL);
+    sigaction(SIGTERM, &act, NULL);
+
+    write_int_to_file(SONY_ALS_POWER, 1);
+    write_int_to_file(SONY_ALS_MANAGED, 1);
+
+    acpi_event_loop(sock_fd);
 
     return 0;
 }
