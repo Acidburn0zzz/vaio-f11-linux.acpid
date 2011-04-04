@@ -33,12 +33,18 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 FILE* open_file(char const* path, char const* mode);
+
+/* Caller is responsible for freeing the returned pointer */
+char const* get_first_backlight_device_name();
 
 int read_int_from_file(char const* path);
 void write_int_to_file(char const* path, int val);
 void read_hex_from_file(char const* path, int* array, int size);
+float read_float_from_file(char const* path);
 
 int ud_connect(char const* name);
 

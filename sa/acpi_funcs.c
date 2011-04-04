@@ -21,30 +21,15 @@
 
 #include "acpi_funcs.h"
 
-void acpi_event_loop(int fd, int bl_ctrl) {
+void acpi_event_loop(int fd) {
     char* buf = NULL;
 
     char* evt_toks[4];
     unsigned int i = 0;
 
-    struct AcpiData vals = init_acpi_data(bl_ctrl);
+    struct AcpiData vals = init_acpi_data();
 
-    int nfds;
-    fd_set set;
-    struct timeval tv = {0, 0};
-
-    for (;;) {
-        nfds = 0;
-        while (!nfds) {
-            update_brightness(&vals, &tv.tv_usec);
-            FD_ZERO(&set);
-            FD_SET(fd, &set);
-            nfds = select(fd+1, &set, NULL, NULL, tv.tv_usec ? &tv : NULL);
-        }
-
-        if ((buf = read_line(fd)) == NULL)
-            break;
-
+    while ((buf = read_line(fd)) != NULL) {
         for (i = 0; i != 4; ++i) { /* Assuming it's always 4 items */
             if (!i)
                 evt_toks[i] = strtok(buf, " ");
@@ -57,133 +42,81 @@ void acpi_event_loop(int fd, int bl_ctrl) {
 
 void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
     /* Assuming all params are valid */
-    int als_lux = -1;
-    int current_brgt = -1;
-    int new_brgt = -1;
-    int kbd_bl = 0;
-    int i;
+    float const MEANINGFUL_ALS_CHANGES = 1.0f;
+    float als_lux = -1.0f;
+    int new_brgt = 0;
+    int do_update_brgt = 0;
 
     if (!strcmp(evt_toks[0], SONY_EVENT_CLASS) &&
-        !strcmp(evt_toks[1], SONY_EVENT_TYPE) &&
-        !strcmp(evt_toks[2], SONY_EVENT_MAJOR)) {
-        current_brgt = read_int_from_file(vals->brgt_path);
-        als_lux = read_int_from_file(SONY_ALS_LUX);
+        !strcmp(evt_toks[1], SONY_EVENT_TYPE)) {
+        als_lux = read_float_from_file(SONY_ALS_LUX);
 
-        if (!als_lux)
-            ++als_lux;
-
-        if (!strcmp(evt_toks[3], SONY_EVENT_ALS)) { /* Ambient lighting changed */
-            /* Turn on keyboard backlight in dim lighting */
-            kbd_bl = read_int_from_file(SONY_KBD_BL);
-            if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
-                write_int_to_file(SONY_KBD_BL, !kbd_bl);
-
-            if (new_brgt > vals->max_brgt)
-                new_brgt = vals->max_brgt;
-            else if (new_brgt < vals->min_brgt)
-                new_brgt = vals->min_brgt;
-
-            vals->current_brgt = current_brgt;
-            vals->new_brgt = new_brgt;
-        }
-        else if (!strcmp(evt_toks[3], SONY_EVENT_OLDALS)) { /* Ambient lighting changed */
-
-            if (als_lux < 1000)
-                new_brgt = 20.24f * log(als_lux) + 17.51f;
-            else if (als_lux < 4630)
-                new_brgt = 130 + als_lux * 27 / 1000;
-            else
-                new_brgt = vals->max_brgt;
-
-            if (vals->table) {
-                for (i = 0; i < vals->table; i++)
-                    if (new_brgt <= vals->tbl_brgt[i])
-                        break;
-
-                vals->new_brgt = i;
-            } else {
-                vals->current_brgt = current_brgt;
-                vals->new_brgt = new_brgt;
+        if (!strcmp(evt_toks[2], SONY_EVENT_BL_BRGT)) {
+            if (!strcmp(evt_toks[3], SONY_EVENT_BL_BRGT_UP) &&
+                vals->current_acpi_brgt < ACPI_MAX_BRGT) {
+                ++vals->current_acpi_brgt;
+                do_update_brgt = 1;
+            }
+            else if (!strcmp(evt_toks[3], SONY_EVENT_BL_BRGT_DOWN) &&
+                     vals->current_acpi_brgt > ACPI_MIN_BRGT) {
+                --vals->current_acpi_brgt;
+                do_update_brgt = 1;
             }
         }
-        else if (!strcmp(evt_toks[3], SONY_BL_BRGT_UP)) { /* User increased bl */
-            if (vals->table) {
-                if (vals->new_brgt < vals->table)
-                    vals->new_brgt++;
-            } else
-                for (i = 0; i < NUMBER_BRGT; i++)
-                    if (current_brgt < vals->tbl_brgt[i]) {
-                        vals->current_brgt = current_brgt;
-                        vals->new_brgt = vals->tbl_brgt[i];
-                        break;
-                    }
+        else if (!strcmp(evt_toks[2], SONY_EVENT_ALS) &&
+                 !strcmp(evt_toks[3], SONY_EVENT_ALS_CHANGED)) {
+            if (fabsf(als_lux-vals->prev_lux) > MEANINGFUL_ALS_CHANGES) {
+                vals->prev_lux = als_lux;
+
+                /* Turn on keyboard backlight in dim lighting */
+                if ((als_lux < AMBIENT_TOO_DIM)^vals->kbd_bl) {
+                    vals->kbd_bl = !vals->kbd_bl;
+                    write_int_to_file(SONY_KBD_BL, vals->kbd_bl);
+                }
+
+                do_update_brgt = 1;
+            }
         }
-        else if (!strcmp(evt_toks[3], SONY_BL_BRGT_DOWN)) { /* User decreased bl */
-            if (vals->table) {
-                if (vals->new_brgt > 0)
-                    vals->new_brgt--;
-            } else
-                for (i = NUMBER_BRGT - 1; i >= 0; i--)
-                    if (current_brgt > vals->tbl_brgt[i]) {
-                        vals->current_brgt = current_brgt;
-                        vals->new_brgt = vals->tbl_brgt[i];
-                        break;
-                    }
+
+        if (do_update_brgt) {
+            new_brgt = (20.24f*logf(als_lux)+17.51f)+
+                       (vals->current_acpi_brgt/(float)ACPI_MAX_BRGT*SONY_MAX_BRGT+SONY_MIN_BRGT);
+            if (new_brgt < SONY_MIN_BRGT)
+                new_brgt = SONY_MIN_BRGT;
+            else if (new_brgt > SONY_MAX_BRGT)
+                new_brgt = SONY_MAX_BRGT;
+            printf("Target brightness: %i - ACPI brightness: %i\n", new_brgt, vals->current_acpi_brgt);
+            update_brightness(vals->current_brgt, new_brgt);
+            vals->current_brgt = new_brgt;
         }
     }
 }
 
-struct AcpiData init_acpi_data(int bl_ctrl) {
+struct AcpiData init_acpi_data() {
     struct AcpiData vals;
-    int i;
 
-    if (bl_ctrl == BC_ACPI) {
-        vals.table = read_int_from_file(ACPI_BL_BRGT_MAX);
-        vals.brgt_path = ACPI_BL_BRGT;
-        read_hex_from_file(SONY_ALS_PARAM, vals.tbl_brgt, vals.table + 1);
-        vals.max_brgt = vals.tbl_brgt[vals.table];
-        vals.min_brgt = vals.tbl_brgt[0];
-    }
-    else if (bl_ctrl == BC_NVIDIA) { /* BC_NVIDIA */
-        vals.table = 0;
-        vals.max_brgt = read_int_from_file(NVIDIA_BL_BRGT_MAX);
-        vals.min_brgt = 1500;
-        vals.brgt_path = NVIDIA_BL_BRGT;
-        for (i = 0; i < NUMBER_BRGT; i++)
-            vals.tbl_brgt[i] = vals.min_brgt+i*(vals.max_brgt-vals.min_brgt)/NUMBER_BRGT;
-    }
-    else { /* BC_SONY */
-        vals.table = 0;
-        vals.max_brgt = read_int_from_file(SONY_BL_BRGT_MAX);
-        vals.min_brgt = 0;
-        vals.brgt_path = SONY_BL_BRGT;
-        vals.tbl_brgt[0] = 7;
-        for (i = 1; i < NUMBER_BRGT; i++)
-            vals.tbl_brgt[i] = 1.585f * vals.tbl_brgt[i-1];
-    }
+    vals.kbd_bl = read_int_from_file(SONY_KBD_BL);
+    vals.prev_lux = read_float_from_file(SONY_ALS_LUX);
+    vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
+    vals.current_acpi_brgt = vals.current_brgt/(float)SONY_MAX_BRGT*ACPI_MAX_BRGT+ACPI_MIN_BRGT;
 
     return vals;
 }
 
-#define DELTA 6
-#define MIN(x,y) ((x) < (y) ? (x) : (y))
-#define MAX(x,y) ((x) > (y) ? (x) : (y))
+void update_brightness(int current, int target) {
+    struct timespec const ts = {0, 50*1000*1000};
+    float const PERCENTAGE_INCREASE = 0.01f;
+    float step = (SONY_MAX_BRGT-SONY_MIN_BRGT)*PERCENTAGE_INCREASE;
 
-void update_brightness(struct AcpiData *vals, long *usec) {
-    if (vals->current_brgt == vals->new_brgt) {
-        *usec = 0;
+    if (target == current)
         return;
+    else if (target < current)
+        step = -step;
+
+    while (abs(target-current) > abs(step)) {
+        current += step;
+        write_int_to_file(SONY_BL_BRGT, current);
+        nanosleep(&ts, NULL); /* There is a failure possibility */
     }
-
-    if (vals->current_brgt < vals->new_brgt)
-        vals->current_brgt = MIN(MAX(vals->current_brgt + 1, (100 + DELTA) * vals->current_brgt/100), vals->new_brgt);
-    else
-        vals->current_brgt = MAX(MIN(vals->current_brgt - 1, (100 - DELTA) * vals->current_brgt/100), vals->new_brgt);
-
-    write_int_to_file(vals->brgt_path, vals->current_brgt);
-
-    if (vals->current_brgt == vals->new_brgt)
-        *usec = 0;
-    else if (!*usec)
-        *usec = 50*1000;
+    write_int_to_file(SONY_BL_BRGT, target);
 }

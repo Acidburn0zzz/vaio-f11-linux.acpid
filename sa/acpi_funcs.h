@@ -32,45 +32,41 @@
 
 #include "file_funcs.h"
 
-enum BacklightController {BC_ACPI, BC_NVIDIA, BC_SONY};
-
-static char const*const ACPI_BL_BRGT = "/sys/class/backlight/acpi_video0/brightness";
-static char const*const ACPI_BL_BRGT_MAX = "/sys/class/backlight/acpi_video0/max_brightness";
-
-static char const*const NVIDIA_BL_BRGT = "/sys/class/backlight/nvidia_backlight/brightness";
-static char const*const NVIDIA_BL_BRGT_MAX = "/sys/class/backlight/nvidia_backlight/max_brightness";
-
-static char const*const SONY_BL_BRGT = "/sys/class/backlight/sony/brightness";
-static char const*const SONY_BL_BRGT_MAX = "/sys/class/backlight/sony/max_brightness";
+static char const*const SONY_BL_BRGT = "/sys/devices/platform/sony-laptop/als_backlight";
+static char const*const SONY_ALS_MANAGED = "/sys/devices/platform/sony-laptop/als_managed";
+static int const SONY_MIN_BRGT = 3;
+static int const SONY_MAX_BRGT = 255;
+static int const ACPI_MIN_BRGT = 0;
+static int const ACPI_MAX_BRGT = 8;
 
 static char const*const SONY_ALS_LUX = "/sys/devices/platform/sony-laptop/als_lux";
-static char const*const SONY_ALS_PARAM = "/sys/devices/platform/sony-laptop/als_parameters";
+static char const*const SONY_ALS_POWER = "/sys/devices/platform/sony-laptop/als_power";
 static char const*const SONY_KBD_BL = "/sys/devices/platform/sony-laptop/kbd_backlight";
-static int const AMBIENT_TOO_DIM = 7; /* If als_lux < 7 then the environment is too dim */
+static unsigned int const AMBIENT_TOO_DIM = 7; /* If als_lux < 7 then the environment is too dim */
+
 static char const*const SONY_EVENT_CLASS = "sony/hotkey";
 static char const*const SONY_EVENT_TYPE = "SNC";
-static char const*const SONY_EVENT_MAJOR = "00000001";
-static char const*const SONY_EVENT_ALS = "00000003";
-static char const*const SONY_EVENT_OLDALS = "0000012f";
-static char const*const SONY_BL_BRGT_UP = "00000011";
-static char const*const SONY_BL_BRGT_DOWN = "00000010";
 
-#define NUMBER_BRGT 9
+static char const*const SONY_EVENT_BL_BRGT = "00000092";
+static char const*const SONY_EVENT_BL_BRGT_UP = "00000011";
+static char const*const SONY_EVENT_BL_BRGT_DOWN = "00000010";
+
+static char const*const SONY_EVENT_ALS = "00000093";
+static char const*const SONY_EVENT_ALS_CHANGED = "00000001";
 
 struct AcpiData {
-    int max_brgt, min_brgt;
-    int table;	/* Values aren't linear. Are table-based */
-    int tbl_brgt[NUMBER_BRGT];
-    int current_brgt, new_brgt;
-    char const* brgt_path;
+    unsigned int kbd_bl;
+    float prev_lux;
+    int current_brgt;
+    int current_acpi_brgt;
 };
-struct AcpiData init_acpi_data(int bl_ctrl);
+struct AcpiData init_acpi_data();
 
-void acpi_event_loop(int fd, int bl_ctrl);
+void acpi_event_loop(int fd);
 
 void handle_acpi_events(struct AcpiData* vals, char** evt_toks);
 
-void update_brightness(struct AcpiData* vals, long *usec);
+void update_brightness(int current, int target);
 
 #endif   /* ----- #ifndef ACPI_FUNCS_INC  ----- */
 

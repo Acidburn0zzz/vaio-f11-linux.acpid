@@ -34,6 +34,30 @@ FILE* open_file(char const* path, char const* mode) {
     return fd;
 }
 
+char const* get_first_backlight_device_name() {
+    char const*const BACKLIGHT_DIR = "/sys/class/backlight";
+    struct dirent* dirp = NULL;
+    char* ret = (char*)malloc(sizeof(dirp->d_name));
+    DIR* dp = NULL;
+    
+    if (!ret) {
+        printf("Failure allocating %li bytes\n", sizeof(dirp->d_name));
+        return NULL;
+    }
+    
+    if ((dp = opendir(BACKLIGHT_DIR)) == NULL) {
+        printf("Cannot open %s\n", BACKLIGHT_DIR);
+        return NULL;
+    }
+
+    if ((dirp = readdir(dp)) != NULL) {
+        printf("No backlight device found\n");
+        return NULL;
+    }
+
+    return memcpy(ret, dirp->d_name, sizeof(dirp->d_name));
+}
+
 int read_int_from_file(char const* path) {
     FILE* const fd = open_file(path, "r");
     int result = -1;
@@ -67,6 +91,18 @@ void read_hex_from_file(char const* path, int* array, int size) {
         array[i] = result;
     }
     fclose(fd);
+}
+float read_float_from_file(char const* path) {
+    FILE* const fd = open_file(path, "r");
+    float result = -1.0f;
+    if (fscanf(fd, "%f", &result) != 1) {
+        fprintf(stderr, "read_float_from_file: fscanf() failed - %s\n",
+                strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    fclose(fd);
+
+    return result;
 }
 
 int ud_connect(char const* name) {
