@@ -33,6 +33,8 @@
 int sock_fd = -1;
 
 void sig_handler(int signum) {
+    (void)signum; /* Shut up the compiler */
+
     write_int_to_file(SONY_ALS_MANAGED, 0);
     write_int_to_file(SONY_ALS_POWER, 0);
 
@@ -60,7 +62,6 @@ int main() {
     sigaction(SIGINT, &act, NULL);
 
     write_int_to_file(SONY_ALS_POWER, 1);
-    write_int_to_file(SONY_ALS_MANAGED, 1);
 
     acpi_event_loop(sock_fd);
 
