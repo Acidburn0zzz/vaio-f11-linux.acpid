@@ -37,6 +37,8 @@ void sig_handler(int signum) {
     write_int_to_file(SONY_ALS_POWER, 0);
 
     close(sock_fd);
+
+    exit(EXIT_SUCCESS);
 }
 
 int main() {
@@ -56,7 +58,6 @@ int main() {
     act.sa_handler = sig_handler;
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGINT, &act, NULL);
-    sigaction(SIGTERM, &act, NULL);
 
     write_int_to_file(SONY_ALS_POWER, 1);
     write_int_to_file(SONY_ALS_MANAGED, 1);
