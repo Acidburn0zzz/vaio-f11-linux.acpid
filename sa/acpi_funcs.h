@@ -32,6 +32,9 @@
 
 #include "file_funcs.h"
 
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+
 static char const*const SONY_BL_BRGT = "/sys/devices/platform/sony-laptop/als_backlight";
 static char const*const SONY_ALS_MANAGED = "/sys/devices/platform/sony-laptop/als_managed";
 static char const*const SONY_ALS_PARAMS = "/sys/devices/platform/sony-laptop/als_parameters";
@@ -59,7 +62,8 @@ struct AcpiData {
     /* Assuming levels in als_parameters correspond to ACPI brightness levels */
     int brgt_levels[9];
     int brgt_range;
-    int current_brgt, current_acpi_brgt;
+    int current_brgt, new_brgt;
+    int current_acpi_brgt;
 };
 struct AcpiData init_acpi_data();
 
@@ -67,7 +71,7 @@ void acpi_event_loop(int fd);
 
 void handle_acpi_events(struct AcpiData* vals, char** evt_toks);
 
-void update_brightness(struct AcpiData const* vals, int target);
+void update_brightness(struct AcpiData* vals, long* usec);
 
 #endif   /* ----- #ifndef ACPI_FUNCS_INC  ----- */
 

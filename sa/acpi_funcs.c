@@ -29,7 +29,22 @@ void acpi_event_loop(int fd) {
 
     struct AcpiData vals = init_acpi_data();
 
-    while ((buf = read_line(fd)) != NULL) {
+    int nfds;
+    fd_set set;
+    struct timeval tv = {0, 0};
+
+    while (1) {
+        nfds = 0;
+        while (!nfds) {
+            update_brightness(&vals, &tv.tv_usec);
+            FD_ZERO(&set);
+            FD_SET(fd, &set);
+            nfds = select(fd+1, &set, NULL, NULL, tv.tv_usec ? &tv : NULL);
+        }
+
+        if ((buf = read_line(fd)) == NULL)
+            continue;
+
         for (i = 0; i != 4; ++i) { /* Assuming it's always 4 items */
             if (!i)
                 evt_toks[i] = strtok(buf, " ");
@@ -44,7 +59,6 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
     /* Assuming all params are valid */
     float const MEANINGFUL_ALS_CHANGES = 1.0f;
     float als_lux = -1.0f;
-    int new_brgt = 0;
     int do_update_brgt = 0;
 
     if (!strcmp(evt_toks[0], SONY_EVENT_CLASS) &&
@@ -79,15 +93,13 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
         }
 
         if (do_update_brgt) {
-            new_brgt = (20.24f*logf(als_lux)+17.51f)+
+            vals->new_brgt = (20.24f*logf(als_lux)+17.51f)+
                        (vals->current_acpi_brgt/(float)ACPI_MAX_BRGT*vals->brgt_range);
-            if (new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
-                new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
-            else if (new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
-                new_brgt = vals->brgt_levels[ACPI_MAX_BRGT];
-            printf("Target brightness: %i - ACPI brightness: %i\n", new_brgt, vals->current_acpi_brgt);
-            update_brightness(vals, new_brgt);
-            vals->current_brgt = new_brgt;
+            if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
+                vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
+            else if (vals->new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
+                vals->new_brgt = vals->brgt_levels[ACPI_MAX_BRGT];
+            printf("Target brightness: %i - ACPI brightness: %i\n", vals->new_brgt, vals->current_acpi_brgt);
         }
     }
 }
@@ -100,26 +112,27 @@ struct AcpiData init_acpi_data() {
     read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, ACPI_MAX_BRGT+1);
     vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
+    vals.new_brgt = vals.current_brgt;
     vals.current_acpi_brgt = (ACPI_MAX_BRGT-ACPI_MIN_BRGT)/2;
 
     return vals;
 }
 
-void update_brightness(struct AcpiData const* vals, int target) {
-    struct timespec const ts = {0, 50*1000*1000};
-    int current = vals->current_brgt;
+void update_brightness(struct AcpiData* vals, long* usec) {
     float const PERCENTAGE_INCREASE = 0.01275f;
     float step = (vals->brgt_levels[ACPI_MAX_BRGT]-vals->brgt_levels[ACPI_MIN_BRGT])*PERCENTAGE_INCREASE;
 
-    if (target == current)
+    if (vals->current_brgt == vals->new_brgt) {
+        *usec = 0;
         return;
-    else if (target < current)
-        step = -step;
-
-    while (abs(target-current) > abs(step)) {
-        current += step;
-        write_int_to_file(SONY_BL_BRGT, current);
-        nanosleep(&ts, NULL); /* There is a failure possibility */
     }
-    write_int_to_file(SONY_BL_BRGT, target);
+    else if (!*usec)
+        *usec = 50*1000;
+
+    if (vals->current_brgt < vals->new_brgt)
+        vals->current_brgt = MIN(vals->current_brgt+step, vals->new_brgt);
+    else
+        vals->current_brgt = MAX(vals->current_brgt-step, vals->new_brgt);
+
+    write_int_to_file(SONY_BL_BRGT, vals->current_brgt);
 }
