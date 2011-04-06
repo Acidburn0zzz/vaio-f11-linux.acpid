@@ -34,8 +34,7 @@
 
 static char const*const SONY_BL_BRGT = "/sys/devices/platform/sony-laptop/als_backlight";
 static char const*const SONY_ALS_MANAGED = "/sys/devices/platform/sony-laptop/als_managed";
-static int const SONY_MIN_BRGT = 3;
-static int const SONY_MAX_BRGT = 255;
+static char const*const SONY_ALS_PARAMS = "/sys/devices/platform/sony-laptop/als_parameters";
 static int const ACPI_MIN_BRGT = 0;
 static int const ACPI_MAX_BRGT = 8;
 
@@ -57,8 +56,10 @@ static char const*const SONY_EVENT_ALS_CHANGED = "00000001";
 struct AcpiData {
     unsigned int kbd_bl;
     float prev_lux;
-    int current_brgt;
-    int current_acpi_brgt;
+    /* Assuming levels in als_parameters correspond to ACPI brightness levels */
+    int brgt_levels[9];
+    int brgt_range;
+    int current_brgt, current_acpi_brgt;
 };
 struct AcpiData init_acpi_data();
 
@@ -66,7 +67,7 @@ void acpi_event_loop(int fd);
 
 void handle_acpi_events(struct AcpiData* vals, char** evt_toks);
 
-void update_brightness(int current, int target);
+void update_brightness(struct AcpiData const* vals, int target);
 
 #endif   /* ----- #ifndef ACPI_FUNCS_INC  ----- */
 

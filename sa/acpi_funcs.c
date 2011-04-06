@@ -80,13 +80,13 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
 
         if (do_update_brgt) {
             new_brgt = (20.24f*logf(als_lux)+17.51f)+
-                       (vals->current_acpi_brgt/(float)ACPI_MAX_BRGT*SONY_MAX_BRGT+SONY_MIN_BRGT);
-            if (new_brgt < SONY_MIN_BRGT)
-                new_brgt = SONY_MIN_BRGT;
-            else if (new_brgt > SONY_MAX_BRGT)
-                new_brgt = SONY_MAX_BRGT;
+                       (vals->current_acpi_brgt/(float)ACPI_MAX_BRGT*vals->brgt_range);
+            if (new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
+                new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
+            else if (new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
+                new_brgt = vals->brgt_levels[ACPI_MAX_BRGT];
             printf("Target brightness: %i - ACPI brightness: %i\n", new_brgt, vals->current_acpi_brgt);
-            update_brightness(vals->current_brgt, new_brgt);
+            update_brightness(vals, new_brgt);
             vals->current_brgt = new_brgt;
         }
     }
@@ -97,16 +97,19 @@ struct AcpiData init_acpi_data() {
 
     vals.kbd_bl = read_int_from_file(SONY_KBD_BL);
     vals.prev_lux = read_float_from_file(SONY_ALS_LUX);
+    read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, ACPI_MAX_BRGT+1);
+    vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
-    vals.current_acpi_brgt = vals.current_brgt/(float)SONY_MAX_BRGT*ACPI_MAX_BRGT+ACPI_MIN_BRGT;
+    vals.current_acpi_brgt = (ACPI_MAX_BRGT-ACPI_MIN_BRGT)/2;
 
     return vals;
 }
 
-void update_brightness(int current, int target) {
+void update_brightness(struct AcpiData const* vals, int target) {
     struct timespec const ts = {0, 50*1000*1000};
-    float const PERCENTAGE_INCREASE = 0.01f;
-    float step = (SONY_MAX_BRGT-SONY_MIN_BRGT)*PERCENTAGE_INCREASE;
+    int current = vals->current_brgt;
+    float const PERCENTAGE_INCREASE = 0.01275f;
+    float step = (vals->brgt_levels[ACPI_MAX_BRGT]-vals->brgt_levels[ACPI_MIN_BRGT])*PERCENTAGE_INCREASE;
 
     if (target == current)
         return;

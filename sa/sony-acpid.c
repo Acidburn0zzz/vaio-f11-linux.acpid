@@ -57,6 +57,7 @@ int main() {
     act.sa_flags = SA_SIGINFO;
     sigaction(SIGINT, &act, NULL);
     sigaction(SIGTERM, &act, NULL);
+    sigaction(SIGHUP, &act, NULL);
 
     write_int_to_file(SONY_ALS_POWER, 1);
     write_int_to_file(SONY_ALS_MANAGED, 1);
