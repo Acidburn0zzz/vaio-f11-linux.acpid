@@ -31,12 +31,13 @@
 #include "acpi_funcs.h"
 
 int sock_fd = -1;
+int prev_power = 0;
 
 void sig_handler(int signum) {
     (void)signum; /* Shut up the compiler */
 
     write_int_to_file(SONY_ALS_MANAGED, 0);
-    write_int_to_file(SONY_ALS_POWER, 0);
+    write_int_to_file(SONY_ALS_POWER, prev_power);
 
     close(sock_fd);
 
@@ -63,6 +64,7 @@ int main() {
     sigaction(SIGTERM, &act, NULL);
     sigaction(SIGHUP, &act, NULL);
 
+    prev_power = read_int_from_file(SONY_ALS_POWER);
     write_int_to_file(SONY_ALS_POWER, 1);
 
     acpi_event_loop(sock_fd);
