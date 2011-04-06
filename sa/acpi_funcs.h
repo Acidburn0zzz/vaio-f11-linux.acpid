@@ -61,6 +61,7 @@ static char const*const SONY_EVENT_TYPE = "SNC";
 #define SONY_KEY_SUSPEND        0x17
 #define SONY_KEY_S1             0x20
 #define SONY_KEY_EJECT          0x40
+#define SONY_EVENT_ALS_CHANGED  0x1
 
 struct AcpiData {
     unsigned int kbd_bl;

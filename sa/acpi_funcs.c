@@ -70,33 +70,35 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
         value = strtol(evt_toks[3], NULL, 16);
 
         switch (handle) {
-          case SONY_EVENT_KEYPRESS:
-            switch (value) {
-              case SONY_KEY_BRGT_UP:
-                if (vals->current_acpi_brgt < ACPI_MAX_BRGT) {
-                    ++vals->current_acpi_brgt;
+            case SONY_EVENT_KEYPRESS:
+                switch (value) {
+                    case SONY_KEY_BRGT_UP:
+                        if (vals->current_acpi_brgt < ACPI_MAX_BRGT) {
+                            ++vals->current_acpi_brgt;
+                            do_update_brgt = 1;
+                        }
+                        break;
+                    case SONY_KEY_BRGT_DOWN:
+                        if (vals->current_acpi_brgt > ACPI_MIN_BRGT) {
+                            --vals->current_acpi_brgt;
+                            do_update_brgt = 1;
+                        }
+                        break;
+                }
+                break;
+            case SONY_EVENT_ALS:
+                if (value == SONY_EVENT_ALS_CHANGED) {
+                    if (vals->kbd_bl) {
+                        int kbd_bl = read_int_from_file(SONY_KBD_BL);
+
+                        /* Turn on keyboard backlight in dim lighting */
+                        if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
+                            write_int_to_file(SONY_KBD_BL, !kbd_bl);
+                    }
+
                     do_update_brgt = 1;
                 }
                 break;
-              case SONY_KEY_BRGT_DOWN:
-                if (vals->current_acpi_brgt > ACPI_MIN_BRGT) {
-                    --vals->current_acpi_brgt;
-                    do_update_brgt = 1;
-                }
-                break;
-            }
-	    break;
-          case SONY_EVENT_ALS:
-              if (vals->kbd_bl) {
-                  int kbd_bl = read_int_from_file(SONY_KBD_BL);
-
-                  /* Turn on keyboard backlight in dim lighting */
-                  if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
-                      write_int_to_file(SONY_KBD_BL, !kbd_bl);
-              }
-
-              do_update_brgt = 1;
-              break;
         }
 
         if (do_update_brgt) {
