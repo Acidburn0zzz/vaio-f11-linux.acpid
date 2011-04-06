@@ -124,8 +124,8 @@ struct AcpiData init_acpi_data() {
 }
 
 void update_brightness(struct AcpiData* vals, long* usec) {
-    float const PERCENTAGE_INCREASE = 0.01275f;
-    float step = (vals->brgt_levels[ACPI_MAX_BRGT]-vals->brgt_levels[ACPI_MIN_BRGT])*PERCENTAGE_INCREASE;
+    int const percent = 6;
+    int const step = 3;
 
     if (vals->current_brgt == vals->new_brgt) {
         *usec = 0;
@@ -135,9 +135,9 @@ void update_brightness(struct AcpiData* vals, long* usec) {
         *usec = 50*1000;
 
     if (vals->current_brgt < vals->new_brgt)
-        vals->current_brgt = MIN(vals->current_brgt+step, vals->new_brgt);
+        vals->current_brgt = MIN(MAX(vals->current_brgt+step,(100+percent)*vals->current_brgt/100), vals->new_brgt);
     else
-        vals->current_brgt = MAX(vals->current_brgt-step, vals->new_brgt);
+        vals->current_brgt = MAX(MIN(vals->current_brgt-step,(100-percent)*vals->current_brgt/100), vals->new_brgt);
 
     write_int_to_file(SONY_BL_BRGT, vals->current_brgt);
 }
