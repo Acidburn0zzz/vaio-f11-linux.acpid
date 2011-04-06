@@ -49,16 +49,21 @@ static unsigned int const AMBIENT_TOO_DIM = 7; /* If als_lux < 7 then the enviro
 static char const*const SONY_EVENT_CLASS = "sony/hotkey";
 static char const*const SONY_EVENT_TYPE = "SNC";
 
-static char const*const SONY_EVENT_BL_BRGT = "00000092";
-static char const*const SONY_EVENT_BL_BRGT_UP = "00000011";
-static char const*const SONY_EVENT_BL_BRGT_DOWN = "00000010";
-
-static char const*const SONY_EVENT_ALS = "00000093";
-static char const*const SONY_EVENT_ALS_CHANGED = "00000001";
+#define SONY_EVENT_KEYPRESS     1
+#define SONY_EVENT_RFKILL       2
+#define SONY_EVENT_ALS          3
+#define SONY_EVENT_FREEFALL     4
+#define SONY_KEY_BRGT_DOWN      0x10
+#define SONY_KEY_BRGT_UP        0x11
+#define SONY_KEY_EXTVID         0x12
+#define SONY_KEY_ZOOM_OUT       0x14
+#define SONY_KEY_ZOOM_IN        0x15
+#define SONY_KEY_SUSPEND        0x17
+#define SONY_KEY_S1             0x20
+#define SONY_KEY_EJECT          0x40
 
 struct AcpiData {
     unsigned int kbd_bl;
-    float prev_lux;
     /* Assuming levels in als_parameters correspond to ACPI brightness levels */
     int brgt_levels[9];
     int brgt_range;

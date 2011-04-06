@@ -58,41 +58,45 @@ void acpi_event_loop(int fd) {
 
 void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
     /* Assuming all params are valid */
-    float const MEANINGFUL_ALS_CHANGES = 1.0f;
     float als_lux = -1.0f;
     int do_update_brgt = 0;
+    int handle, value;
 
     if (!strcmp(evt_toks[0], SONY_EVENT_CLASS) &&
         !strcmp(evt_toks[1], SONY_EVENT_TYPE)) {
         als_lux = read_float_from_file(SONY_ALS_LUX);
 
-        if (!strcmp(evt_toks[2], SONY_EVENT_BL_BRGT)) {
-            if (!strcmp(evt_toks[3], SONY_EVENT_BL_BRGT_UP) &&
-                vals->current_acpi_brgt < ACPI_MAX_BRGT) {
-                ++vals->current_acpi_brgt;
-                do_update_brgt = 1;
-            }
-            else if (!strcmp(evt_toks[3], SONY_EVENT_BL_BRGT_DOWN) &&
-                     vals->current_acpi_brgt > ACPI_MIN_BRGT) {
-                --vals->current_acpi_brgt;
-                do_update_brgt = 1;
-            }
-        }
-        else if (!strcmp(evt_toks[2], SONY_EVENT_ALS) &&
-                 !strcmp(evt_toks[3], SONY_EVENT_ALS_CHANGED)) {
-            if (fabsf(als_lux-vals->prev_lux) > MEANINGFUL_ALS_CHANGES) {
-                vals->prev_lux = als_lux;
+        handle = strtol(evt_toks[2], NULL, 16);
+        value = strtol(evt_toks[3], NULL, 16);
 
-                if (vals->kbd_bl) {
-                    int kbd_bl = read_int_from_file(SONY_KBD_BL);
-
-                    /* Turn on keyboard backlight in dim lighting */
-                    if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
-                        write_int_to_file(SONY_KBD_BL, !kbd_bl);
+        switch (handle) {
+          case SONY_EVENT_KEYPRESS:
+            switch (value) {
+              case SONY_KEY_BRGT_UP:
+                if (vals->current_acpi_brgt < ACPI_MAX_BRGT) {
+                    ++vals->current_acpi_brgt;
+                    do_update_brgt = 1;
                 }
-
-                do_update_brgt = 1;
+                break;
+              case SONY_KEY_BRGT_DOWN:
+                if (vals->current_acpi_brgt > ACPI_MIN_BRGT) {
+                    --vals->current_acpi_brgt;
+                    do_update_brgt = 1;
+                }
+                break;
             }
+	    break;
+          case SONY_EVENT_ALS:
+              if (vals->kbd_bl) {
+                  int kbd_bl = read_int_from_file(SONY_KBD_BL);
+
+                  /* Turn on keyboard backlight in dim lighting */
+                  if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
+                      write_int_to_file(SONY_KBD_BL, !kbd_bl);
+              }
+
+              do_update_brgt = 1;
+              break;
         }
 
         if (do_update_brgt) {
@@ -112,7 +116,6 @@ struct AcpiData init_acpi_data() {
     struct stat st;
 
     vals.kbd_bl = !stat(SONY_KBD_BL, &st);
-    vals.prev_lux = read_float_from_file(SONY_ALS_LUX);
     read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, ACPI_MAX_BRGT+1);
     vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
