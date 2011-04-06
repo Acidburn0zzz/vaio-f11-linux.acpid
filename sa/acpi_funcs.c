@@ -20,6 +20,7 @@
  */
 
 #include "acpi_funcs.h"
+#include <sys/stat.h>
 
 void acpi_event_loop(int fd) {
     char* buf = NULL;
@@ -82,10 +83,12 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
             if (fabsf(als_lux-vals->prev_lux) > MEANINGFUL_ALS_CHANGES) {
                 vals->prev_lux = als_lux;
 
-                /* Turn on keyboard backlight in dim lighting */
-                if ((als_lux < AMBIENT_TOO_DIM)^vals->kbd_bl) {
-                    vals->kbd_bl = !vals->kbd_bl;
-                    write_int_to_file(SONY_KBD_BL, vals->kbd_bl);
+                if (vals->kbd_bl) {
+                    int kbd_bl = read_int_from_file(SONY_KBD_BL);
+
+                    /* Turn on keyboard backlight in dim lighting */
+                    if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
+                        write_int_to_file(SONY_KBD_BL, !kbd_bl);
                 }
 
                 do_update_brgt = 1;
@@ -106,14 +109,16 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
 
 struct AcpiData init_acpi_data() {
     struct AcpiData vals;
+    struct stat st;
 
-    vals.kbd_bl = read_int_from_file(SONY_KBD_BL);
+    vals.kbd_bl = !stat(SONY_KBD_BL, &st);
     vals.prev_lux = read_float_from_file(SONY_ALS_LUX);
     read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, ACPI_MAX_BRGT+1);
     vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
     vals.new_brgt = vals.current_brgt;
     vals.current_acpi_brgt = (ACPI_MAX_BRGT-ACPI_MIN_BRGT)/2;
+    write_int_to_file(SONY_ALS_MANAGED, 1);
 
     return vals;
 }
