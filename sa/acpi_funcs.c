@@ -87,16 +87,23 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
                 }
                 break;
             case SONY_EVENT_ALS:
-                if (value == SONY_EVENT_ALS_CHANGED) {
-                    if (vals->kbd_bl) {
-                        int kbd_bl = read_int_from_file(SONY_KBD_BL);
+                switch (value) {
+                    case SONY_EVENT_ALS_CHANGED:
+                        if (vals->kbd_bl) {
+                            int kbd_bl = read_int_from_file(SONY_KBD_BL);
 
-                        /* Turn on keyboard backlight in dim lighting */
-                        if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
-                            write_int_to_file(SONY_KBD_BL, !kbd_bl);
-                    }
+                            /* Turn on keyboard backlight in dim lighting */
+                            if ((als_lux < AMBIENT_TOO_DIM)^kbd_bl)
+                                write_int_to_file(SONY_KBD_BL, !kbd_bl);
+                        }
 
-                    do_update_brgt = 1;
+                        do_update_brgt = 1;
+                        break;
+                    case SONY_EVENT_ALS_ACPI_VIDEO:
+                        vals->current_acpi_brgt = read_int_from_file(ACPI_VIDEO_BRGT);
+
+                        do_update_brgt = 1;
+                        break;
                 }
                 break;
         }
@@ -121,7 +128,7 @@ struct AcpiData init_acpi_data() {
     vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
     vals.new_brgt = vals.current_brgt;
-    vals.current_acpi_brgt = (ACPI_MAX_BRGT-ACPI_MIN_BRGT)/2;
+    vals.current_acpi_brgt = read_int_from_file(ACPI_VIDEO_BRGT);
     write_int_to_file(SONY_ALS_MANAGED, 1);
 
     return vals;

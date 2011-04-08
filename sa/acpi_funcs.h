@@ -38,6 +38,7 @@
 static char const*const SONY_BL_BRGT = "/sys/devices/platform/sony-laptop/als_backlight";
 static char const*const SONY_ALS_MANAGED = "/sys/devices/platform/sony-laptop/als_managed";
 static char const*const SONY_ALS_PARAMS = "/sys/devices/platform/sony-laptop/als_parameters";
+static char const*const ACPI_VIDEO_BRGT = "/sys/devices/virtual/backlight/acpi_video0/brightness";
 static int const ACPI_MIN_BRGT = 0;
 static int const ACPI_MAX_BRGT = 8;
 
@@ -62,6 +63,7 @@ static char const*const SONY_EVENT_TYPE = "SNC";
 #define SONY_KEY_S1             0x20
 #define SONY_KEY_EJECT          0x40
 #define SONY_EVENT_ALS_CHANGED  0x1
+#define SONY_EVENT_ALS_ACPI_VIDEO 0x2
 
 struct AcpiData {
     unsigned int kbd_bl;
