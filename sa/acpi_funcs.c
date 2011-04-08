@@ -102,8 +102,7 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
         }
 
         if (do_update_brgt) {
-            vals->new_brgt = (20.24f*logf(als_lux)+17.51f)+
-                       (vals->current_acpi_brgt/(float)ACPI_MAX_BRGT*vals->brgt_range);
+            vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[0]);
             if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
             else if (vals->new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
