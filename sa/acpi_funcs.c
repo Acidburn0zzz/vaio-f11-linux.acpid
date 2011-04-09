@@ -109,12 +109,12 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
         }
 
         if (do_update_brgt) {
-            vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[0]);
+            vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[ACPI_MIN_BRGT]);
             if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
             else if (vals->new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MAX_BRGT];
-            printf("Target brightness: %i - ACPI brightness: %i\n", vals->new_brgt, vals->current_acpi_brgt);
+//            printf("Target brightness: %i - ACPI brightness: %i\n", vals->new_brgt, vals->current_acpi_brgt);
         }
     }
 }
