@@ -109,6 +109,7 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
         }
 
         if (do_update_brgt) {
+            vals->current_brgt = read_int_from_file(SONY_BL_BRGT);
             vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[ACPI_MIN_BRGT]);
             if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
