@@ -43,7 +43,7 @@ char const* get_first_backlight_device_name();
 
 int read_int_from_file(char const* path);
 void write_int_to_file(char const* path, int val);
-void read_hex_from_file(char const* path, int* array, int size);
+void read_hex_from_file(char const* path, int* array, int* size);
 float read_float_from_file(char const* path);
 
 int ud_connect(char const* name);

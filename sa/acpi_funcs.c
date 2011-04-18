@@ -73,7 +73,7 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
             case SONY_EVENT_KEYPRESS:
                 switch (value) {
                     case SONY_KEY_BRGT_UP:
-                        if (vals->current_acpi_brgt < ACPI_MAX_BRGT) {
+                        if (vals->current_acpi_brgt < vals->brgt_num - 1) {
                             ++vals->current_acpi_brgt;
                             do_update_brgt = 1;
                         }
@@ -113,8 +113,8 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
             vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[ACPI_MIN_BRGT]);
             if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
-            else if (vals->new_brgt > vals->brgt_levels[ACPI_MAX_BRGT])
-                vals->new_brgt = vals->brgt_levels[ACPI_MAX_BRGT];
+            else if (vals->new_brgt > vals->brgt_levels[vals->brgt_num-1])
+                vals->new_brgt = vals->brgt_levels[vals->brgt_num-1];
 //            printf("Target brightness: %i - ACPI brightness: %i\n", vals->new_brgt, vals->current_acpi_brgt);
         }
     }
@@ -125,8 +125,9 @@ struct AcpiData init_acpi_data() {
     struct stat st;
 
     vals.kbd_bl = !stat(SONY_KBD_BL, &st);
-    read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, ACPI_MAX_BRGT+1);
-    vals.brgt_range = vals.brgt_levels[ACPI_MAX_BRGT]-vals.brgt_levels[ACPI_MIN_BRGT];
+    vals.brgt_num = ACPI_MAX_BRGT + 1;
+    read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, &vals.brgt_num);
+    vals.brgt_range = vals.brgt_levels[vals.brgt_num-1]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
     vals.new_brgt = vals.current_brgt;
     vals.current_acpi_brgt = read_int_from_file(ACPI_VIDEO_BRGT);
