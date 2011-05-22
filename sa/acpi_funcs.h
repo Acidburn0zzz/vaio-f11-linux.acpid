@@ -38,7 +38,7 @@
 static char const*const SONY_BL_BRGT = "/sys/devices/platform/sony-laptop/als_backlight";
 static char const*const SONY_ALS_MANAGED = "/sys/devices/platform/sony-laptop/als_managed";
 static char const*const SONY_ALS_PARAMS = "/sys/devices/platform/sony-laptop/als_backlight_levels";
-static char const*const ACPI_VIDEO_BRGT = "/sys/devices/virtual/backlight/acpi_video0/brightness";
+static char const*const ACPI_VIDEO_BRGT = "/sys/class/backlight/acpi_video0/brightness";
 static int const ACPI_MIN_BRGT = 0;
 static int const ACPI_MAX_BRGT = 15;
 
