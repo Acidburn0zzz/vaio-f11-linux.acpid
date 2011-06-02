@@ -97,20 +97,21 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
                                 write_int_to_file(SONY_KBD_BL, !kbd_bl);
                         }
 
-                        do_update_brgt = 1;
+                        do_update_brgt = 3;
                         break;
                     case SONY_EVENT_ALS_ACPI_VIDEO:
                         vals->current_acpi_brgt = read_int_from_file(ACPI_VIDEO_BRGT);
 
-                        do_update_brgt = 1;
+                        do_update_brgt = 3;
                         break;
                 }
                 break;
         }
 
         if (do_update_brgt) {
+	    vals->is_event = do_update_brgt - 1;
             vals->current_brgt = read_int_from_file(SONY_BL_BRGT);
-            vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT] + sqrtf(als_lux) / 11.5f * (vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[ACPI_MIN_BRGT]);
+            vals->new_brgt = vals->brgt_levels[vals->current_acpi_brgt] * pow(als_lux / vals->brgt_params[10-9], log(((vals->brgt_levels[vals->current_acpi_brgt] - vals->brgt_levels[ACPI_MIN_BRGT]) * vals->brgt_params[9-9] / 100.0f + vals->brgt_levels[ACPI_MIN_BRGT]) / vals->brgt_levels[vals->current_acpi_brgt]) / log (1.0f /  vals->brgt_params[10-9]));
             if (vals->new_brgt < vals->brgt_levels[ACPI_MIN_BRGT])
                 vals->new_brgt = vals->brgt_levels[ACPI_MIN_BRGT];
             else if (vals->new_brgt > vals->brgt_levels[vals->brgt_num-1])
@@ -123,13 +124,17 @@ void handle_acpi_events(struct AcpiData* vals, char** evt_toks) {
 struct AcpiData init_acpi_data() {
     struct AcpiData vals;
     struct stat st;
+    int num = ALS_NUM_PARAM;
 
+    read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_params, &num);
+    vals.brgt_params[10] += vals.brgt_params[11] << 8;
     vals.kbd_bl = !stat(SONY_KBD_BL, &st);
     vals.brgt_num = ACPI_MAX_BRGT + 1;
-    read_hex_from_file(SONY_ALS_PARAMS, vals.brgt_levels, &vals.brgt_num);
+    read_hex_from_file(SONY_ALS_LEVELS, vals.brgt_levels, &vals.brgt_num);
     vals.brgt_range = vals.brgt_levels[vals.brgt_num-1]-vals.brgt_levels[ACPI_MIN_BRGT];
     vals.current_brgt = read_int_from_file(SONY_BL_BRGT);
     vals.new_brgt = vals.current_brgt;
+    vals.is_event = 2;
     vals.current_acpi_brgt = read_int_from_file(ACPI_VIDEO_BRGT);
     write_int_to_file(SONY_ALS_MANAGED, 1);
 
@@ -137,18 +142,18 @@ struct AcpiData init_acpi_data() {
 }
 
 void update_brightness(struct AcpiData* vals, long* usec) {
-    int const percent = 6;
-    int const step = 3;
+    int percent = vals->brgt_params[16-9-vals->is_event];
+    int const step = 1;
 
     if (vals->current_brgt == vals->new_brgt) {
         *usec = 0;
         return;
     }
     else if (!*usec)
-        *usec = 50*1000;
+        *usec = vals->brgt_params[17-9-vals->is_event]*1000;
 
     if (vals->current_brgt < vals->new_brgt)
-        vals->current_brgt = MIN(MAX(vals->current_brgt+step,(100+percent)*vals->current_brgt/100), vals->new_brgt);
+        vals->current_brgt = MIN(MAX(vals->current_brgt+step,((100+percent)*vals->current_brgt+99)/100), vals->new_brgt);
     else
         vals->current_brgt = MAX(MIN(vals->current_brgt-step,(100-percent)*vals->current_brgt/100), vals->new_brgt);
 
